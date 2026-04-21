@@ -14,7 +14,8 @@
       "Bash(npx --yes shadcn@latest init -t vite -b radix -y)",
       "Bash(npx --yes shadcn@latest init -t vite -b radix -p nova -y)",
       "Bash(npx --yes shadcn@latest add dialog input scroll-area -y)",
-      "Bash(npm ls *)"
+      "Bash(npm ls *)",
+      "Bash(node -p \"require\\('./node_modules/@ai-sdk/react/package.json'\\).version\")"
     ]
   }
 }
