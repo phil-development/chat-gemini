@@ -5,7 +5,16 @@
       "Bash(npm init *)",
       "Bash(npm install *)",
       "Bash(npm run *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(rmdir frontend *)",
+      "Bash(npm create *)",
+      "Bash(npx --yes shadcn@latest init --yes --base-color neutral)",
+      "Bash(npx --yes shadcn@latest init --help)",
+      "Bash(npx --yes shadcn@latest init -t vite -y)",
+      "Bash(npx --yes shadcn@latest init -t vite -b radix -y)",
+      "Bash(npx --yes shadcn@latest init -t vite -b radix -p nova -y)",
+      "Bash(npx --yes shadcn@latest add dialog input scroll-area -y)",
+      "Bash(npm ls *)"
     ]
   }
 }
