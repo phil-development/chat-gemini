@@ -16,6 +16,7 @@ export async function listConversations() {
   const { rows } = await pool.query<{
     id: string
     title: string | null
+    rating: -1 | 1 | null
     created_at: string
     last_message_at: string | null
     preview: string | null
@@ -23,6 +24,7 @@ export async function listConversations() {
     `select
        c.id,
        c.title,
+       c.rating,
        c.created_at,
        max(m.created_at) as last_message_at,
        (select content from messages
@@ -38,6 +40,17 @@ export async function listConversations() {
 
 export async function deleteConversation(id: string) {
   await pool.query('delete from conversations where id = $1', [id])
+}
+
+export async function setConversationRating(
+  id: string,
+  rating: -1 | 1 | null
+) {
+  const { rows } = await pool.query<{ id: string; rating: -1 | 1 | null }>(
+    'update conversations set rating = $2 where id = $1 returning id, rating',
+    [id, rating]
+  )
+  return rows[0]
 }
 
 export async function getMessages(conversationId: string) {

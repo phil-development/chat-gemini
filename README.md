@@ -30,7 +30,7 @@ Modal de chat interativo com Gemini via streaming, com persistência de conversa
 
 ## Funcionalidades
 
-- Modal com sidebar de conversas (lista, seleciona, apaga, cria nova)
+- Modal com sidebar de conversas (lista, seleciona, apaga, cria nova, avalia 👍/👎)
 - Histórico por conversa carregado automaticamente do banco
 - Resposta do Gemini em streaming token-a-token
 - Indicador visual de "pensando" + botão **Parar** para cancelar o stream
@@ -46,6 +46,7 @@ Modal de chat interativo com Gemini via streaming, com persistência de conversa
 | GET    | `/conversations`                    | Lista conversas (mais recente primeiro)|
 | POST   | `/conversations`                    | Cria conversa, retorna `{ id }`        |
 | DELETE | `/conversations/:id`                | Apaga conversa (cascade nas mensagens) |
+| PATCH  | `/conversations/:id/rating`         | Avalia conversa (`-1`, `1` ou `null`)  |
 | GET    | `/conversations/:id/messages`       | Últimas 50 mensagens da conversa       |
 | POST   | `/chat`                             | Envia mensagem, retorna stream         |
 

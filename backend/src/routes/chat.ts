@@ -7,6 +7,7 @@ import {
   getMessages,
   listConversations,
   saveMessage,
+  setConversationRating,
 } from '../db.js'
 
 export async function chatRoutes(app: FastifyInstance) {
@@ -25,6 +26,17 @@ export async function chatRoutes(app: FastifyInstance) {
       return reply.status(204).send()
     }
   )
+
+  app.patch<{
+    Params: { id: string }
+    Body: { rating: -1 | 1 | null }
+  }>('/conversations/:id/rating', async (req, reply) => {
+    const { rating } = req.body
+    if (rating !== -1 && rating !== 1 && rating !== null) {
+      return reply.status(400).send({ error: 'rating must be -1, 1 or null' })
+    }
+    return await setConversationRating(req.params.id, rating)
+  })
 
   app.get<{ Params: { id: string } }>(
     '/conversations/:id/messages',

@@ -1,5 +1,6 @@
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
+import { ThumbsDown, ThumbsUp } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
@@ -28,7 +29,9 @@ import {
   deleteConversation,
   fetchMessages,
   listConversations,
+  setConversationRating,
   type Conversation,
+  type Rating,
 } from '@/lib/api'
 
 const STORAGE_KEY = 'conversationId'
@@ -36,6 +39,7 @@ const STORAGE_KEY = 'conversationId'
 export function ChatModal() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [conversationId, setConversationId] = useState<string | null>(null)
+  const [rating, setRating] = useState<Rating>(null)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(true)
   const [deleteCandidate, setDeleteCandidate] = useState<Conversation | null>(
@@ -66,9 +70,10 @@ export function ChatModal() {
   }, [])
 
   const loadConversation = useCallback(
-    async (id: string) => {
+    async (id: string, knownRating: Rating = null) => {
       setLoading(true)
       setConversationId(id)
+      setRating(knownRating)
       localStorage.setItem(STORAGE_KEY, id)
       const history = await fetchMessages(id)
       setMessages(
@@ -87,15 +92,16 @@ export function ChatModal() {
     async function init() {
       const list = await refreshConversations()
       const stored = localStorage.getItem(STORAGE_KEY)
-      const exists = stored && list.some((c) => c.id === stored)
-      if (exists && stored) {
-        await loadConversation(stored)
+      const target = stored && list.find((c) => c.id === stored)
+      if (target) {
+        await loadConversation(target.id, target.rating)
       } else if (list.length > 0) {
-        await loadConversation(list[0].id)
+        await loadConversation(list[0].id, list[0].rating)
       } else {
         const conv = await createConversation()
-        await refreshConversations()
-        await loadConversation(conv.id)
+        const next = await refreshConversations()
+        const fresh = next.find((c) => c.id === conv.id)
+        await loadConversation(conv.id, fresh?.rating ?? null)
       }
     }
     init()
@@ -110,14 +116,27 @@ export function ChatModal() {
   async function handleNew() {
     if (busy) stop()
     const conv = await createConversation()
-    await refreshConversations()
-    await loadConversation(conv.id)
+    const list = await refreshConversations()
+    const fresh = list.find((c) => c.id === conv.id)
+    await loadConversation(conv.id, fresh?.rating ?? null)
   }
 
-  async function handleSelect(id: string) {
-    if (id === conversationId) return
+  async function handleSelect(c: Conversation) {
+    if (c.id === conversationId) return
     if (busy) stop()
-    await loadConversation(id)
+    await loadConversation(c.id, c.rating)
+  }
+
+  async function handleRate(next: Rating) {
+    if (!conversationId) return
+    const newRating = rating === next ? null : next
+    setRating(newRating)
+    try {
+      await setConversationRating(conversationId, newRating)
+      await refreshConversations()
+    } catch {
+      setRating(rating)
+    }
   }
 
   async function confirmDelete() {
@@ -129,11 +148,12 @@ export function ChatModal() {
     const list = await refreshConversations()
     if (id === conversationId) {
       if (list.length > 0) {
-        await loadConversation(list[0].id)
+        await loadConversation(list[0].id, list[0].rating)
       } else {
         const conv = await createConversation()
-        await refreshConversations()
-        await loadConversation(conv.id)
+        const next = await refreshConversations()
+        const fresh = next.find((c) => c.id === conv.id)
+        await loadConversation(conv.id, fresh?.rating ?? null)
       }
     }
   }
@@ -190,11 +210,27 @@ export function ChatModal() {
                           ? 'bg-muted'
                           : 'hover:bg-muted/60'
                       }`}
-                      onClick={() => handleSelect(c.id)}
+                      onClick={() => handleSelect(c)}
                     >
                       <div className="flex-1 min-w-0 pr-6">
-                        <div className="truncate">
-                          {c.preview || 'Conversa vazia'}
+                        <div className="truncate flex items-center gap-1.5">
+                          {c.rating === 1 && (
+                            <ThumbsUp
+                              className="size-3 shrink-0 text-primary"
+                              fill="currentColor"
+                              aria-label="avaliada positivamente"
+                            />
+                          )}
+                          {c.rating === -1 && (
+                            <ThumbsDown
+                              className="size-3 shrink-0 text-destructive"
+                              fill="currentColor"
+                              aria-label="avaliada negativamente"
+                            />
+                          )}
+                          <span className="truncate">
+                            {c.preview || 'Conversa vazia'}
+                          </span>
                         </div>
                         <div className="text-xs text-muted-foreground truncate">
                           {new Date(
@@ -251,6 +287,44 @@ export function ChatModal() {
                       </div>
                     ))}
                     {status === 'submitted' && <TypingIndicator />}
+                    {!busy &&
+                      messages.some((m) => m.role === 'assistant') && (
+                        <div className="flex items-center gap-2 pt-2 text-sm text-muted-foreground">
+                          <span>Avalie esta conversa:</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRate(1)}
+                            aria-label="Gostei"
+                            aria-pressed={rating === 1}
+                            className={`size-8 rounded-md border flex items-center justify-center transition-colors ${
+                              rating === 1
+                                ? 'border-primary text-primary bg-primary/10'
+                                : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+                            }`}
+                          >
+                            <ThumbsUp
+                              className="size-4"
+                              fill={rating === 1 ? 'currentColor' : 'none'}
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRate(-1)}
+                            aria-label="Não gostei"
+                            aria-pressed={rating === -1}
+                            className={`size-8 rounded-md border flex items-center justify-center transition-colors ${
+                              rating === -1
+                                ? 'border-destructive text-destructive bg-destructive/10'
+                                : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+                            }`}
+                          >
+                            <ThumbsDown
+                              className="size-4"
+                              fill={rating === -1 ? 'currentColor' : 'none'}
+                            />
+                          </button>
+                        </div>
+                      )}
                     <div ref={endRef} />
                   </div>
                 )}

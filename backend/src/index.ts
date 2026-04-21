@@ -7,7 +7,7 @@ const app = Fastify({ logger: true })
 
 await app.register(cors, {
   origin: true,
-  methods: ['GET', 'HEAD', 'POST', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
 })
 await app.register(chatRoutes)
 
