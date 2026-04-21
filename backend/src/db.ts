@@ -12,6 +12,34 @@ export async function createConversation() {
   return rows[0]
 }
 
+export async function listConversations() {
+  const { rows } = await pool.query<{
+    id: string
+    title: string | null
+    created_at: string
+    last_message_at: string | null
+    preview: string | null
+  }>(
+    `select
+       c.id,
+       c.title,
+       c.created_at,
+       max(m.created_at) as last_message_at,
+       (select content from messages
+         where conversation_id = c.id
+         order by created_at asc limit 1) as preview
+     from conversations c
+     left join messages m on m.conversation_id = c.id
+     group by c.id
+     order by coalesce(max(m.created_at), c.created_at) desc`
+  )
+  return rows
+}
+
+export async function deleteConversation(id: string) {
+  await pool.query('delete from conversations where id = $1', [id])
+}
+
 export async function getMessages(conversationId: string) {
   const { rows } = await pool.query<{ role: Role; content: string }>(
     `select role, content from messages

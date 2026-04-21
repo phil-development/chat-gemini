@@ -1,12 +1,30 @@
 import type { FastifyInstance } from 'fastify'
 import { google } from '@ai-sdk/google'
 import { streamText, convertToModelMessages, type UIMessage } from 'ai'
-import { createConversation, getMessages, saveMessage } from '../db.js'
+import {
+  createConversation,
+  deleteConversation,
+  getMessages,
+  listConversations,
+  saveMessage,
+} from '../db.js'
 
 export async function chatRoutes(app: FastifyInstance) {
+  app.get('/conversations', async () => {
+    return await listConversations()
+  })
+
   app.post('/conversations', async () => {
     return await createConversation()
   })
+
+  app.delete<{ Params: { id: string } }>(
+    '/conversations/:id',
+    async (req, reply) => {
+      await deleteConversation(req.params.id)
+      return reply.status(204).send()
+    }
+  )
 
   app.get<{ Params: { id: string } }>(
     '/conversations/:id/messages',
@@ -31,7 +49,7 @@ export async function chatRoutes(app: FastifyInstance) {
     await saveMessage(conversationId, 'user', lastText)
 
     const result = streamText({
-      model: google('gemini-2.0-flash'),
+      model: google('gemini-2.5-flash'),
       messages: await convertToModelMessages(messages),
       onFinish: async ({ text }) => {
         await saveMessage(conversationId, 'assistant', text)
@@ -39,6 +57,11 @@ export async function chatRoutes(app: FastifyInstance) {
     })
 
     reply.hijack()
-    result.pipeUIMessageStreamToResponse(reply.raw)
+    result.pipeUIMessageStreamToResponse(reply.raw, {
+      headers: {
+        'Access-Control-Allow-Origin': req.headers.origin ?? '*',
+        'Access-Control-Allow-Credentials': 'true',
+      },
+    })
   })
 }
