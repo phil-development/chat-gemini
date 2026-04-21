@@ -18,6 +18,7 @@ export function ChatModal() {
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(true)
+  const endRef = useRef<HTMLDivElement>(null)
 
   const conversationIdRef = useRef<string | null>(null)
   conversationIdRef.current = conversationId
@@ -54,6 +55,10 @@ export function ChatModal() {
     }
     init()
   }, [setMessages])
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -94,6 +99,7 @@ export function ChatModal() {
                   </span>
                 </div>
               ))}
+              <div ref={endRef} />
             </div>
           )}
         </ScrollArea>
